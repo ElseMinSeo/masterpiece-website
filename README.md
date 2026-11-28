@@ -3,7 +3,11 @@
 운영자가 첫 만남을 소개하고, 두 사람이 시간과 장소를 고르면 예약까지 연결하는 서비스입니다.
 이 저장소는 **첫, 길 모바일 웹** 개발 전용입니다.
 
-현재는 **MVP 단계 0~1 (로컬 데모)** 입니다. 외부 계정이나 API 키 없이 실행되고,
+현재는 **MVP 단계 2 (계정과 데이터)** 까지 왔습니다. 두 가지 방식으로 실행할 수 있어요.
+
+- **데모 모드(기본)**: 외부 계정·키 없이 실행. 데이터는 브라우저에만 저장. Vercel 공개 데모가 이 방식입니다.
+- **Supabase 모드**: 로컬 Supabase(Docker)에 로그인 사용자별로 저장. 이메일 코드 로그인과 약관 동의가 붙습니다.
+
 모든 인물·장소·글은 개발용 가상 데이터입니다. 서비스 개요는 [docs/overview.md](docs/overview.md)에 있습니다.
 
 ## 실행
@@ -22,6 +26,24 @@ npm run dev          # http://localhost:3000 을 브라우저(모바일 화면 �
 | `npm run typecheck` | TypeScript 타입 검사 |
 | `npm test` | Vitest 단위 테스트 (검증 규칙·저장소·필터) |
 | `npm run build && npm run test:e2e` | Playwright 화면 테스트 (포트 3100, 320/375/430px 포함) |
+| `npm run db:start` / `db:stop` | 로컬 Supabase 켜기/끄기 (Docker 필요) |
+| `npm run db:reset` | 로컬 DB를 마이그레이션과 seed로 다시 만들기 |
+| `npm run test:db` | DB 접근 규칙(RLS)·제출 함수 통합 테스트 (로컬 Supabase 필요) |
+| `npm run test:e2e:supabase` | Supabase 모드 화면 테스트 (포트 3200) |
+| `npm run db:seed:gen` | `lib/data/places.ts`로 `supabase/seed.sql` 다시 만들기 |
+
+## Supabase 모드로 실행하기
+
+1. [Docker](https://www.docker.com/)를 켜고 `npm run db:start` (처음엔 이미지를 받느라 몇 분 걸려요).
+2. `npx supabase status -o env`의 값으로 `.env.local`을 만듭니다 (`.env.example` 참고).
+   ```bash
+   NEXT_PUBLIC_DATA_SOURCE=supabase
+   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=<ANON_KEY>
+   SUPABASE_SERVICE_ROLE_KEY=<SERVICE_ROLE_KEY>
+   DEV_TEST_LOGIN=1   # 선택: 개발용 테스트 로그인·본인확인 흉내
+   ```
+3. `npm run dev` → http://localhost:3000. 로그인 코드 메일은 **http://127.0.0.1:54324** (Mailpit)에서 확인합니다.
 
 ## 스택
 
@@ -35,9 +57,13 @@ components/          재사용 UI: TopBar, BottomNav, Button, Card, TagChip, Opt
                      PlaceCard, BookmarkButton, ApplicationCard, AgeRange
 lib/apply/           신청서 선택지, Zod 검증(단계별·제출 전체), 날짜 도우미
 lib/data/            개발용 가상 장소·데일리 글 (출시 전 교체 대상)
-lib/repo/            데이터 접근 계약(AppRepository)과 localStorage 데모 구현
+lib/repo/            데이터 접근 계약(AppRepository): localStorage 데모 구현과 Supabase 구현
+lib/supabase/        Supabase 클라이언트(브라우저·서버·관리자)와 로그인 세션 처리
+lib/verification/    본인확인 공급자 계약과 개발용 흉내 공급자
+proxy.ts             supabase 모드에서 로그인·필수 동의 확인 (Next 16의 middleware)
+supabase/            로컬 설정, 마이그레이션(테이블·접근 규칙), seed, 로그인 메일 템플릿
 lib/store.tsx        화면 전체가 공유하는 상태(저장 목록·초안·신청)
-tests/unit, tests/e2e
+tests/unit, tests/db, tests/e2e, tests/e2e-supabase
 docs/                서비스 개요, 시안 대비 차이, 결정 기록
 .github/             이슈·PR 양식
 CLAUDE.md, AGENTS.md AI 작업 규칙
