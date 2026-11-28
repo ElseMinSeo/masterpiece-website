@@ -1,10 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { hasRequiredConsents, REQUIRED_CONSENTS } from "@/lib/consent";
 import { supabasePublicEnv } from "@/lib/env";
 
 /** 로그인해야 들어갈 수 있는 경로 */
 export const PROTECTED_PREFIXES = ["/apply", "/appointments", "/saved", "/profile", "/onboarding"];
-export const REQUIRED_CONSENTS = ["terms", "privacy"] as const;
 
 const isProtected = (path: string) => PROTECTED_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
 
@@ -41,9 +41,9 @@ export async function updateSession(request: NextRequest): Promise<NextResponse>
 
   if (isProtected(path) && !path.startsWith("/onboarding")) {
     const { data: rows } = await supabase
-      .from("consents").select("purpose").is("revoked_at", null).in("purpose", [...REQUIRED_CONSENTS]);
-    const have = new Set((rows ?? []).map((r) => r.purpose));
-    if (!REQUIRED_CONSENTS.every((p) => have.has(p))) return redirect(`/onboarding/consent?next=${next}`);
+      .from("consents").select("purpose, policy_version").eq("user_id", userId)
+      .is("revoked_at", null).in("purpose", [...REQUIRED_CONSENTS]);
+    if (!hasRequiredConsents(rows ?? [])) return redirect(`/onboarding/consent?next=${next}`);
   }
   return response;
 }

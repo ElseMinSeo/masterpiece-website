@@ -1,4 +1,6 @@
-// 신청 제출의 서버 쪽 처리. 로그인 세션의 Supabase 클라이언트로 동작하므로 RLS와 DB 제약이 함께 적용된다.
+// 신청 제출의 서버 쪽 처리.
+// 1) 로그인 세션(userDb)으로 사용자를 확인하고 2) Zod로 검증한 뒤 3) 서버 전용 키(serverDb)로 제출 함수를 부른다.
+// 제출 함수는 서버 전용이라, 브라우저에서 직접 불러 검증을 건너뛸 수 없다.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { toApplication, type ApplicationRow } from "@/lib/repo/mapping";
 import type { Application } from "@/lib/repo/types";
@@ -8,8 +10,10 @@ export type SubmitResponse =
   | { status: 200; body: { application: Application; duplicate: boolean } }
   | { status: 401 | 422 | 500; body: { errors: FieldErrors } };
 
-export async function submitForUser(supabase: SupabaseClient, body: unknown, now: Date = new Date()): Promise<SubmitResponse> {
-  const { data: auth } = await supabase.auth.getUser();
+export async function submitForUser(
+  userDb: SupabaseClient, serverDb: SupabaseClient, body: unknown, now: Date = new Date(),
+): Promise<SubmitResponse> {
+  const { data: auth } = await userDb.auth.getUser();
   if (!auth.user) return { status: 401, body: { errors: { _form: "로그인이 필요해요." } } };
 
   const raw = body as Partial<ApplicationDraft> | null;
@@ -20,9 +24,11 @@ export async function submitForUser(supabase: SupabaseClient, body: unknown, now
   const parsed = parseSubmission(draft, now);
   if (!parsed.ok) return { status: 422, body: { errors: parsed.errors } };
 
-  const { data: existing } = await supabase
-    .from("applications").select("id").eq("idempotency_key", draft.idempotencyKey).maybeSingle();
-  const { data, error } = await supabase.rpc("submit_application", {
+  const userId = auth.user.id;
+  const { data: existing } = await userDb
+    .from("applications").select("id").eq("user_id", userId).eq("idempotency_key", draft.idempotencyKey).maybeSingle();
+  const { data, error } = await serverDb.rpc("submit_application", {
+    p_user_id: userId,
     p_idempotency_key: draft.idempotencyKey,
     p_payload: parsed.value,
   });

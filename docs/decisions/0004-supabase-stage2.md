@@ -11,7 +11,8 @@
 - 데이터 저장 방식을 환경변수로 고른다: `NEXT_PUBLIC_DATA_SOURCE=local-demo`(기본) 또는 `supabase`.
   화면은 `AppRepository`만 쓰므로 둘 다 같은 화면으로 동작한다.
 - 스키마와 접근 규칙(RLS)은 `supabase/migrations/`의 SQL로 관리한다. 모든 테이블은 기본 거부이고, 사용자는 본인 데이터만 본다.
-- 신청은 서버 경로(`POST /api/applications`)가 Zod로 다시 검증한 뒤, DB 함수 `submit_application`으로만 저장한다.
+- 신청은 서버 경로(`POST /api/applications`)가 세션으로 사용자를 확인하고 Zod로 다시 검증한 뒤, DB 함수 `submit_application`으로만 저장한다.
+  이 함수는 서버 전용 키로만 부를 수 있어서, 브라우저에서 직접 불러 검증을 건너뛸 수 없다(최종 검토에서 발견해 수정).
   같은 키 재요청·동시 요청은 기존 신청을 돌려주고, 회차별 진행 중 신청은 1건이다(DB 유일 인덱스).
 - 작성 중 신청서는 `application_drafts`(사용자당 1행, JSON)에 따로 둔다. 미완성 초안은 형식 검증을 할 수 없어서다.
 - 운영자가 찾을 값(역·예산·나이·성별·흡연)은 컬럼에, 나머지 답변은 `answers`(JSON)에 둔다.

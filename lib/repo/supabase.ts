@@ -33,12 +33,17 @@ export class SupabaseRepository implements AppRepository {
   }
 
   async getVerificationStatus(): Promise<VerificationStatus> {
-    const { data } = await this.db.from("private_profiles").select("verification_status").maybeSingle();
+    const user = await this.currentUser();
+    if (!user) return "unverified";
+    // 운영자는 다른 사람 행도 읽을 수 있으므로 항상 본인으로 좁힌다
+    const { data } = await this.db.from("private_profiles").select("verification_status").eq("user_id", user.id).maybeSingle();
     return (data?.verification_status as VerificationStatus | undefined) ?? "unverified";
   }
 
   async getProfile(): Promise<Profile> {
-    const { data } = await this.db.from("profiles").select("nickname").maybeSingle();
+    const user = await this.currentUser();
+    if (!user) return { nickname: "" };
+    const { data } = await this.db.from("profiles").select("nickname").eq("id", user.id).maybeSingle();
     return { nickname: data?.nickname ?? "" };
   }
 
@@ -69,7 +74,7 @@ export class SupabaseRepository implements AppRepository {
 
   async getDraft(): Promise<ApplicationDraft | null> {
     if (!(await this.currentUser())) return null;
-    const { data } = await this.db.from("application_drafts").select("data").maybeSingle();
+    const { data } = await this.db.from("application_drafts").select("data").eq("user_id", (await this.uid())).maybeSingle();
     const raw = data?.data as (Partial<ApplicationDraft> & { idempotencyKey?: string }) | undefined;
     return raw && typeof raw.idempotencyKey === "string" ? normalizeDraft(raw as ApplicationDraft) : null;
   }
@@ -116,9 +121,11 @@ export class SupabaseRepository implements AppRepository {
   }
 
   async listApplications(): Promise<Application[]> {
-    if (!(await this.currentUser())) return [];
+    const user = await this.currentUser();
+    if (!user) return [];
     const { data } = await this.db
       .from("applications").select("id, number, status, submitted_at, idempotency_key, answers")
+      .eq("user_id", user.id)
       .order("submitted_at", { ascending: false });
     return ((data ?? []) as ApplicationRow[]).map(toApplication);
   }

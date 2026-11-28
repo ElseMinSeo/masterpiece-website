@@ -25,4 +25,12 @@ describe("로그인 후 돌아갈 주소", () => {
     expect(safeNext("//evil.example")).toBe("/home");
     expect(safeNext("/\\evil.example")).toBe("/home");
   });
+
+  it("브라우저가 지우는 제어 문자로 다른 사이트로 빠지는 주소를 막는다", () => {
+    expect(safeNext("/\t/evil.example")).toBe("/home");
+    expect(safeNext("/\n/evil.example")).toBe("/home");
+    expect(safeNext("/\r/evil.example")).toBe("/home");
+    expect(safeNext("/ /evil.example")).toBe("/home");
+    expect(safeNext("/apply?step=1#top")).toBe("/apply?step=1#top");
+  });
 });

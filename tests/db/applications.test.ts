@@ -9,8 +9,9 @@ function payload(overrides: Record<string, unknown> = {}) {
   return { ...r.value, ...overrides };
 }
 
+// 제출 함수는 서버(관리자 키)만 호출한다. 서버가 세션에서 확인한 사용자 id를 넘긴다.
 const submit = (u: TestUser, key: string, p = payload()) =>
-  u.client.rpc("submit_application", { p_idempotency_key: key, p_payload: p });
+  admin().rpc("submit_application", { p_user_id: u.id, p_idempotency_key: key, p_payload: p });
 
 let a: TestUser;
 let b: TestUser;
@@ -79,10 +80,26 @@ describe("신청 제출 함수", () => {
     expect((await e.client.from("applications").select("id")).data).toEqual([]);
   });
 
-  it("로그인하지 않으면 제출할 수 없다", async () => {
+  it("로그인하지 않은 방문자는 제출 함수를 부를 수 없다", async () => {
     const { createClient } = await import("@supabase/supabase-js");
     const guest = createClient(process.env.SUPABASE_TEST_URL!, process.env.SUPABASE_TEST_ANON_KEY!);
-    expect((await guest.rpc("submit_application", { p_idempotency_key: "g", p_payload: payload() })).error).not.toBeNull();
+    const res = await guest.rpc("submit_application", { p_user_id: a.id, p_idempotency_key: "g", p_payload: payload() });
+    expect(res.error).not.toBeNull();
+  });
+
+  it("로그인 사용자도 서버 검증을 건너뛰고 제출 함수를 직접 부를 수 없다", async () => {
+    const f = await makeUser("ap-direct");
+    const res = await f.client.rpc("submit_application", {
+      p_user_id: f.id, p_idempotency_key: "direct", p_payload: payload({ birthYear: 2015, intro: "" }),
+    });
+    expect(res.error).not.toBeNull();
+    expect((await f.client.from("applications").select("id")).data).toEqual([]);
+  });
+
+  it("지나치게 큰 답변은 DB도 거절한다", async () => {
+    const g = await makeUser("ap-big");
+    const res = await submit(g, "big", payload({ junk: "x".repeat(200_000) }));
+    expect(res.error).not.toBeNull();
   });
 });
 
