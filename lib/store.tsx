@@ -2,12 +2,16 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { emptyDraft, type ApplicationDraft } from "@/lib/apply/schema";
-import { getRepository, type Application, type SubmitResult } from "@/lib/repo";
+import { getRepository, type Application, type CurrentUser, type SubmitResult, type VerificationStatus } from "@/lib/repo";
 import { newIdempotencyKey } from "@/lib/repo/local";
 import type { Profile } from "@/lib/types";
 
 interface AppState {
   ready: boolean;
+  /** 데이터 저장 방식 */
+  mode: "local-demo" | "supabase";
+  user: CurrentUser | null;
+  verification: VerificationStatus;
   profile: Profile;
   bookmarks: string[];
   draft: ApplicationDraft | null;
@@ -23,6 +27,8 @@ interface AppActions {
   submit(): Promise<SubmitResult>;
   updateNickname(n: string): Promise<void>;
   resetDemo(): Promise<void>;
+  /** 서버 상태를 다시 읽는다 (본인확인 상태 변경 등) */
+  refresh(): Promise<void>;
 }
 
 const Ctx = createContext<(AppState & AppActions) | null>(null);
@@ -30,18 +36,19 @@ const Ctx = createContext<(AppState & AppActions) | null>(null);
 export function AppProvider({ children }: { children: ReactNode }) {
   const repo = getRepository();
   const [state, setState] = useState<AppState>({
-    ready: false, profile: { nickname: "" }, bookmarks: [], draft: null, applications: [],
+    ready: false, mode: repo.kind, user: null, verification: "unverified",
+    profile: { nickname: "" }, bookmarks: [], draft: null, applications: [],
   });
   const draftRef = useRef<ApplicationDraft | null>(null);
   const bookmarksRef = useRef<string[]>([]);
 
   const load = useCallback(async () => {
-    const [profile, bookmarks, draft, applications] = await Promise.all([
-      repo.getProfile(), repo.listBookmarkIds(), repo.getDraft(), repo.listApplications(),
+    const [user, verification, profile, bookmarks, draft, applications] = await Promise.all([
+      repo.currentUser(), repo.getVerificationStatus(), repo.getProfile(), repo.listBookmarkIds(), repo.getDraft(), repo.listApplications(),
     ]);
     draftRef.current = draft;
     bookmarksRef.current = bookmarks;
-    setState({ ready: true, profile, bookmarks, draft, applications });
+    setState({ ready: true, mode: repo.kind, user, verification, profile, bookmarks, draft, applications });
   }, [repo]);
 
   useEffect(() => {
@@ -57,6 +64,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const actions = useMemo<AppActions>(() => ({
     isSaved: () => false, // 아래에서 state 기반으로 덮어씀
     async toggleBookmark(placeId) {
+      if (repo.kind === "supabase" && !(await repo.currentUser())) {
+        window.location.assign(`/login?next=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        return;
+      }
       const cur = bookmarksRef.current;
       const next = !cur.includes(placeId);
       const optimistic = next ? [...cur, placeId] : cur.filter((id) => id !== placeId);
@@ -99,6 +110,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async updateNickname(n) {
       const profile = await repo.updateNickname(n);
       setState((s) => ({ ...s, profile }));
+    },
+    async refresh() {
+      await load();
     },
     async resetDemo() {
       await repo.resetDemo();

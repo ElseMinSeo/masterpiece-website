@@ -1,7 +1,7 @@
 import { normalizeDraft, parseSubmission, type ApplicationDraft } from "@/lib/apply/schema";
 import { getPlace } from "@/lib/data/places";
 import type { Profile } from "@/lib/types";
-import type { AppRepository, Application, SubmitResult } from "./types";
+import type { AppRepository, Application, CurrentUser, SubmitResult, VerificationStatus } from "./types";
 
 /** localStorage와 같은 최소 인터페이스 (테스트에서 메모리 구현으로 대체) */
 export interface KeyValueStore {
@@ -49,6 +49,13 @@ export class LocalDemoRepository implements AppRepository {
   }
   private write(key: string, value: unknown) {
     this.store.setItem(key, JSON.stringify(value));
+  }
+
+  async currentUser(): Promise<CurrentUser | null> {
+    return { id: "local-demo-user", email: null };
+  }
+  async getVerificationStatus(): Promise<VerificationStatus> {
+    return "unverified";
   }
 
   async getProfile(): Promise<Profile> {

@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { BookmarkIcon, CalendarIcon, FlameIcon, UserIcon } from "@/components/icons";
-import { Button, DevBadge, LinkButton, TopBar } from "@/components/ui";
+import { Button, DevBadge, LinkButton, StatusBadge, TopBar } from "@/components/ui";
 import { TextInput } from "@/components/form";
 import { STATUS_LABEL, useActiveApplication, useApp } from "@/lib/store";
 
+const VERIFICATION_LABEL = { unverified: "본인확인 전", pending: "확인 중", verified: "확인 완료" } as const;
+
 export default function ProfilePage() {
-  const { ready, profile, bookmarks, draft, updateNickname, resetDemo } = useApp();
+  const { ready, mode, user, verification, profile, bookmarks, draft, updateNickname, resetDemo } = useApp();
   const active = useActiveApplication();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -43,7 +45,9 @@ export default function ProfilePage() {
             <>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[20px] font-semibold" data-testid="nickname">{ready ? profile.nickname : "…"}</p>
-                <DevBadge>가상 사용자</DevBadge>
+                {mode === "supabase"
+                  ? <p className="truncate text-[13px] text-muted" data-testid="profile-email">{user?.email}</p>
+                  : <DevBadge>가상 사용자</DevBadge>}
               </div>
               <button type="button" onClick={() => { setName(profile.nickname); setEditing(true); }}
                 className="min-h-10 shrink-0 rounded-lg border border-line bg-white px-3 text-[13px]">
@@ -76,13 +80,31 @@ export default function ProfilePage() {
           </Link>
         </section>
 
-        <section className="rounded-2xl border border-dashed border-line p-4">
-          <p className="text-[14px] font-semibold">개발용 도구</p>
-          <p className="mt-1 text-[13px] text-muted">이 기기의 브라우저에 저장된 데모 데이터(저장 목록·신청서·신청 내역)를 모두 지워요.</p>
-          <Button variant="outline" className="mt-3 min-h-10 text-[14px]" onClick={() => {
-            if (window.confirm("데모 데이터를 모두 지울까요?")) void resetDemo();
-          }}>데모 데이터 초기화</Button>
+        <section className="rounded-2xl border border-line bg-white p-4" aria-labelledby="verify-title">
+          <div className="flex items-center justify-between gap-2">
+            <h2 id="verify-title" className="text-[15px] font-semibold">성인·본인확인</h2>
+            <StatusBadge>
+              <span data-testid="verification-status">{VERIFICATION_LABEL[verification]}</span>
+            </StatusBadge>
+          </div>
+          <p className="mt-2 text-[13px] leading-relaxed text-muted">
+            소개는 본인확인을 마친 분께만 보내드려요. 본인확인은 확인 업체 계약 후 제공돼요.
+          </p>
         </section>
+
+        {mode === "supabase" ? (
+          <form action="/auth/signout" method="post">
+            <Button type="submit" variant="outline" block className="min-h-11 text-[15px]">로그아웃</Button>
+          </form>
+        ) : (
+          <section className="rounded-2xl border border-dashed border-line p-4">
+            <p className="text-[14px] font-semibold">개발용 도구</p>
+            <p className="mt-1 text-[13px] text-muted">이 기기의 브라우저에 저장된 데모 데이터(저장 목록·신청서·신청 내역)를 모두 지워요.</p>
+            <Button variant="outline" className="mt-3 min-h-10 text-[14px]" onClick={() => {
+              if (window.confirm("데모 데이터를 모두 지울까요?")) void resetDemo();
+            }}>데모 데이터 초기화</Button>
+          </section>
+        )}
       </div>
     </main>
   );
