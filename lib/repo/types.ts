@@ -17,11 +17,18 @@ export type SubmitResult =
 
 /**
  * 화면이 쓰는 데이터 접근 계약.
- * 현재는 브라우저 localStorage 데모 구현(LocalDemoRepository)을 쓰고,
- * 단계 2에서 로그인 사용자별 Supabase 구현으로 교체한다.
+ * local-demo: 브라우저 localStorage 데모(LocalDemoRepository)
+ * supabase: 로그인 사용자별 Supabase 저장(SupabaseRepository)
  */
+export type VerificationStatus = "unverified" | "pending" | "verified";
+export interface CurrentUser { id: string; email: string | null }
+
 export interface AppRepository {
   readonly kind: "local-demo" | "supabase";
+  /** 로그인 사용자. 데모 모드는 항상 가상 사용자를 돌려준다. */
+  currentUser(): Promise<CurrentUser | null>;
+  /** 성인·본인확인 상태. 데모 모드는 항상 "unverified". */
+  getVerificationStatus(): Promise<VerificationStatus>;
   getProfile(): Promise<Profile>;
   updateNickname(nickname: string): Promise<Profile>;
   listBookmarkIds(): Promise<string[]>;
