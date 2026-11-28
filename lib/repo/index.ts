@@ -1,4 +1,7 @@
+import { dataSource } from "@/lib/env";
+import { createBrowserSupabase } from "@/lib/supabase/browser";
 import { LocalDemoRepository, type KeyValueStore } from "./local";
+import { SupabaseRepository } from "./supabase";
 import type { AppRepository } from "./types";
 
 const memory = new Map<string, string>();
@@ -24,10 +27,14 @@ function browserStore(): KeyValueStore {
 
 let instance: AppRepository | null = null;
 
-/** 단계 2에서 NEXT_PUBLIC_DATA_SOURCE=supabase 분기를 추가해 교체한다. */
+/** NEXT_PUBLIC_DATA_SOURCE=supabase 이면 로그인 사용자별 Supabase, 아니면 브라우저 데모 저장소 */
 export function getRepository(): AppRepository {
-  if (!instance) instance = new LocalDemoRepository(browserStore());
+  if (!instance) {
+    instance = dataSource() === "supabase"
+      ? new SupabaseRepository(createBrowserSupabase())
+      : new LocalDemoRepository(browserStore());
+  }
   return instance;
 }
 
-export type { AppRepository, Application, SubmitResult } from "./types";
+export type { AppRepository, Application, CurrentUser, SubmitResult, VerificationStatus } from "./types";

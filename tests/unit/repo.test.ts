@@ -35,9 +35,12 @@ describe("로컬 데모 저장소", () => {
 
   it("진행 중인 신청이 있으면 다른 초안으로도 새 신청이 생기지 않는다", async () => {
     const { r } = repo();
-    await r.submitApplication(validDraft("k1"));
-    await r.submitApplication(validDraft("k2"));
+    const first = await r.submitApplication(validDraft("k1"));
+    const second = await r.submitApplication({ ...validDraft("k2"), intro: "새로 쓴 소개" });
     expect(await r.listApplications()).toHaveLength(1);
+    // 새 답변은 저장되지 않으므로 성공처럼 보이면 안 된다
+    expect(second.ok).toBe(false);
+    if (first.ok && !second.ok) expect(second.errors._form).toContain(first.application.number);
   });
 
   it("잘못된 초안은 저장하지 않고 필드 오류를 돌려준다", async () => {

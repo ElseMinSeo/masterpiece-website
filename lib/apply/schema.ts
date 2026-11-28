@@ -4,7 +4,7 @@ import {
   INTRO_MAX, MAX_DATES, MAX_STATIONS, MAX_TIME_SLOTS, MOODS, NICKNAME_MAX, PERSONALITIES,
   PREFERRED_PLACES, SMOKING, STATIONS, TEMPOS, TIME_SLOTS,
 } from "./options";
-import { seoulDateString, upcomingDates } from "./dates";
+import { seoulDateString, slotFitsDate, upcomingDates } from "./dates";
 
 export interface ApplicationDraft {
   // 1단계 기본 정보
@@ -154,6 +154,15 @@ export function confirmSchema(now: Date = new Date()) {
     .refine((v) => v.budgetMin === null || v.budgetMax === null || v.budgetMin <= v.budgetMax, {
       path: ["budgetMax"],
       message: "최대 예산은 최소 예산보다 크거나 같아야 해요.",
+    })
+    // 토요일만 골랐는데 '평일 저녁'만 고른 것처럼 맞는 조합이 없는 선택을 막는다
+    .refine((v) => v.timeSlots.length === 0 || v.dates.every((d) => v.timeSlots.some((t) => slotFitsDate(t, d))), {
+      path: ["dates"],
+      message: "고른 날짜 중 시간대와 맞지 않는 날이 있어요. 평일은 '평일 저녁', 토·일은 주말 시간대를 함께 골라주세요.",
+    })
+    .refine((v) => v.dates.length === 0 || v.timeSlots.every((t) => v.dates.some((d) => slotFitsDate(t, d))), {
+      path: ["timeSlots"],
+      message: "고른 시간대에 맞는 날짜가 없어요. 주말 시간대는 토·일, '평일 저녁'은 월~금 날짜와 함께 골라주세요.",
     });
 }
 

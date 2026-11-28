@@ -76,7 +76,7 @@ test("홈 → 장소 저장 → 매칭 신청 → 완료 → 내 약속 (중복 
   await page.getByRole("button", { name: "성수" }).click();
   await page.getByRole("button", { name: "뚝섬" }).click();
   await expect(page.getByRole("button", { name: "왕십리" })).toBeDisabled(); // 최대 2곳
-  await page.getByRole("group", { name: "가능한 날짜" }).getByRole("button").nth(1).click();
+  await page.getByRole("group", { name: "가능한 날짜" }).getByRole("button", { name: /\((월|화|수|목|금)\)/ }).first().click(); // 평일 저녁과 맞는 평일
   await page.getByRole("button", { name: "평일 저녁 (19~21시)" }).click();
   await page.getByLabel("1인 최소 예산(원)").fill("40000");
   await page.getByLabel("1인 최대 예산(원)").fill("20000");

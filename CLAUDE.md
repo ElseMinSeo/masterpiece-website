@@ -28,6 +28,8 @@ Next.js 관련 규칙은 [AGENTS.md](AGENTS.md)를 따릅니다. 이 버전의 N
 npm run typecheck
 npm test
 npm run build && npm run test:e2e   # 화면을 바꿨을 때
+npm run test:db                      # DB(마이그레이션·접근 규칙)를 바꿨을 때, 먼저 npm run db:start
+npm run test:e2e:supabase            # 로그인·저장 흐름을 바꿨을 때
 ```
 
 ## 디자인 도구
@@ -42,6 +44,8 @@ npm run build && npm run test:e2e   # 화면을 바꿨을 때
 
 ## 프로젝트 메모
 <!-- 진행 중인 목표, 결정 사항, 참고할 내용을 여기에 쌓아 갑니다. -->
-- 현재 단계: MVP 단계 0~1 (localStorage 데모, 외부 키 없음).
-- 다음 단계(2): Supabase 연결. `lib/repo/`에 구현을 추가하는 방식으로 바꿉니다.
+- 현재 단계: MVP 단계 2 로컬 완료. 데모 모드(기본)와 Supabase 모드(`NEXT_PUBLIC_DATA_SOURCE=supabase`)가 함께 있음.
+- 이 클라우드 환경에서 로컬 Supabase 이미지는 Docker Hub에서 받는다(`npm run db:start`에 설정됨). Docker 데몬이 꺼져 있으면 `dockerd &`.
+- DB 변경은 `supabase/migrations/`에 새 파일로 추가하고, 접근 규칙 테스트를 `tests/db/`에 함께 쓴다.
+- 다음 단계(3): 운영자 소개·수락·일정/장소 합의. 운영 Supabase 연결은 별도 승인 후.
 - 하단 메뉴 변경안(홈·장소·내 약속·저장·프로필)은 D01 승인이 필요합니다. (`docs/design-notes.md`)

@@ -1,7 +1,7 @@
 import { normalizeDraft, parseSubmission, type ApplicationDraft } from "@/lib/apply/schema";
 import { getPlace } from "@/lib/data/places";
 import type { Profile } from "@/lib/types";
-import type { AppRepository, Application, SubmitResult } from "./types";
+import type { AppRepository, Application, CurrentUser, SubmitResult, VerificationStatus } from "./types";
 
 /** localStorage와 같은 최소 인터페이스 (테스트에서 메모리 구현으로 대체) */
 export interface KeyValueStore {
@@ -49,6 +49,13 @@ export class LocalDemoRepository implements AppRepository {
   }
   private write(key: string, value: unknown) {
     this.store.setItem(key, JSON.stringify(value));
+  }
+
+  async currentUser(): Promise<CurrentUser | null> {
+    return { id: "local-demo-user", email: null };
+  }
+  async getVerificationStatus(): Promise<VerificationStatus> {
+    return "unverified";
   }
 
   async getProfile(): Promise<Profile> {
@@ -107,7 +114,9 @@ export class LocalDemoRepository implements AppRepository {
     const same = apps.find((a) => a.idempotencyKey === draft.idempotencyKey);
     if (same) return { ok: true, application: same, duplicate: true };
     const active = apps.find((a) => ACTIVE.includes(a.status));
-    if (active) return { ok: true, application: active, duplicate: true };
+    if (active) {
+      return { ok: false, errors: { _form: `이미 진행 중인 신청(${active.number})이 있어요. 지금 신청이 끝난 뒤 새로 신청할 수 있어요.` } };
+    }
 
     const now = this.now();
     const parsed = parseSubmission(draft, now);
