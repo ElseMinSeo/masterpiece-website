@@ -21,9 +21,14 @@ test("이메일 코드로 로그인하고 필수 동의 후 원래 가려던 곳
   await page.getByRole("button", { name: "코드 받기" }).click();
   await expect(page.getByText("이메일 형식이 올바르지 않아요.")).toBeVisible();
 
+  // 휴대폰 자동입력: 이메일 제안, 문자·메일로 받은 코드 제안, 맞춤법 검사 끔
+  await expect(page.getByLabel("이메일")).toHaveAttribute("autocomplete", "email");
+  await expect(page.getByLabel("이메일")).toHaveAttribute("spellcheck", "false");
   await page.getByLabel("이메일").fill(email);
   await page.getByRole("button", { name: "코드 받기" }).click();
   await expect(page.getByLabel("6자리 코드")).toBeVisible();
+  await expect(page.getByLabel("6자리 코드")).toHaveAttribute("autocomplete", "one-time-code");
+  await expect(page.getByLabel("6자리 코드")).toHaveAttribute("spellcheck", "false");
 
   await page.getByLabel("6자리 코드").fill("000000");
   await page.getByRole("button", { name: "로그인" }).click();

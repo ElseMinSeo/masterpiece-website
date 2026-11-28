@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { parseSubmission } from "@/lib/apply/schema";
-import { NOW, validDraft } from "../unit/helpers";
+import { MON, NOW, SAT, validDraft } from "../unit/helpers";
 import { admin, makeUser, type TestUser } from "./helpers";
 
 function payload(overrides: Record<string, unknown> = {}) {
@@ -39,6 +39,38 @@ describe("신청 제출 함수", () => {
     expect(rows![0]!.slot_id).toBe("weekday-evening");
     expect(new Date(rows![0]!.starts_at).toISOString()).toBe(`${p.dates[0]}T10:00:00.000Z`);
     expect(new Date(rows![0]!.ends_at).toISOString()).toBe(`${p.dates[0]}T12:00:00.000Z`);
+  });
+
+  it("평일·주말을 섞어 골라도 맞는 날짜×시간대 조합만 저장한다", async () => {
+    const m = await makeUser("ap-mixed");
+    const res = await submit(m, "mix-1", payload({ dates: [MON, SAT], timeSlots: ["weekday-evening", "weekend-lunch"] }));
+    expect(res.error).toBeNull();
+    const { data: rows } = await m.client.from("availability").select("slot_date, slot_id").order("slot_date");
+    expect(rows).toEqual([
+      { slot_date: SAT, slot_id: "weekend-lunch" },
+      { slot_date: MON, slot_id: "weekday-evening" },
+    ]);
+  });
+
+  it("기간이 끝났거나 아직 시작 전인 회차는 status가 open이어도 접수하지 않는다", async () => {
+    const now = Date.now();
+    const iso = (ms: number) => new Date(now + ms).toISOString();
+    const { data: made, error } = await admin().from("cohorts").insert([
+      { code: `ended-${now}`, region: "성수", start_at: iso(-2_000), end_at: iso(-1_000), status: "open" },
+      { code: `future-${now}`, region: "성수", start_at: iso(100 * 86_400_000), end_at: iso(150 * 86_400_000), status: "open" },
+    ]).select("id");
+    expect(error).toBeNull();
+    const ids = made!.map((c) => c.id as string);
+    try {
+      const h = await makeUser("ap-cohort");
+      const res = await submit(h, "co-1");
+      expect(res.error).toBeNull();
+      const { data: pilot } = await admin().from("cohorts").select("id").eq("code", "pilot-1").single();
+      expect(res.data.cohort_id).toBe(pilot!.id);
+    } finally {
+      await admin().from("applications").delete().in("cohort_id", ids);
+      await admin().from("cohorts").delete().in("id", ids);
+    }
   });
 
   it("다른 키로 동시에 제출해도 진행 중인 신청은 1건뿐이다", async () => {

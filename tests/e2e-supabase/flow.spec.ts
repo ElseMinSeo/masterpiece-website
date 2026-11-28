@@ -30,7 +30,7 @@ async function fillApplication(page: Page) {
   await page.getByTestId("step-next").click();
 
   await page.getByRole("button", { name: "성수" }).click();
-  await page.getByRole("group", { name: "가능한 날짜" }).getByRole("button").nth(1).click();
+  await page.getByRole("group", { name: "가능한 날짜" }).getByRole("button", { name: /\((월|화|수|목|금)\)/ }).first().click(); // 평일 저녁과 맞는 평일
   await page.getByRole("button", { name: "평일 저녁 (19~21시)" }).click();
   await page.getByLabel("1인 최소 예산(원)").fill("20000");
   await page.getByLabel("1인 최대 예산(원)").fill("40000");

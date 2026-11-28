@@ -18,6 +18,8 @@ export class SupabaseRepository implements AppRepository {
   readonly kind = "supabase" as const;
   private pendingDraft: ApplicationDraft | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  /** 진행 중인 초안 저장. 제출 전에 끝나기를 기다려, 제출 뒤 초안이 되살아나지 않게 한다. */
+  private saving: Promise<void> = Promise.resolve();
 
   constructor(private db: SupabaseClient) {}
 
@@ -91,21 +93,33 @@ export class SupabaseRepository implements AppRepository {
     this.timer = null;
     const draft = this.pendingDraft;
     this.pendingDraft = null;
-    if (!draft) return;
+    if (!draft) return this.saving;
+    const run = this.saving.then(() => this.upsertDraft(draft));
+    this.saving = run.catch(() => undefined);
+    return this.saving;
+  }
+
+  private async upsertDraft(draft: ApplicationDraft): Promise<void> {
     const user = await this.currentUser();
     if (!user) return;
     await this.db.from("application_drafts").upsert({ user_id: user.id, data: draft });
   }
 
-  async clearDraft(): Promise<void> {
+  /** 아직 보내지 않은 초안은 버리고, 이미 보내는 중인 저장은 끝날 때까지 기다린다 */
+  private async settleDraftSaves(): Promise<void> {
     this.pendingDraft = null;
     if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
+    await this.saving;
+  }
+
+  async clearDraft(): Promise<void> {
+    await this.settleDraftSaves();
     await this.db.from("application_drafts").delete().not("user_id", "is", null);
   }
 
   async submitApplication(draft: ApplicationDraft): Promise<SubmitResult> {
-    this.pendingDraft = null;
-    if (this.timer) clearTimeout(this.timer);
+    await this.settleDraftSaves();
     const res = await fetch("/api/applications", {
       method: "POST",
       headers: { "content-type": "application/json" },

@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
+import { POLICY_VERSION, REQUIRED_CONSENTS } from "@/lib/consent";
 
 const URL = process.env.SUPABASE_TEST_URL!;
 const ANON = process.env.SUPABASE_TEST_ANON_KEY!;
@@ -22,8 +23,9 @@ export interface TestUser {
   client: SupabaseClient;
 }
 
-/** 테스트마다 새 사용자를 만들고 그 사용자로 로그인한 클라이언트를 돌려준다 */
-export async function makeUser(tag: string): Promise<TestUser> {
+/** 테스트마다 새 사용자를 만들고 그 사용자로 로그인한 클라이언트를 돌려준다.
+ * 기본으로 현재 버전 필수 약관(terms, privacy)에 동의한 상태로 만든다. */
+export async function makeUser(tag: string, options: { consent?: boolean } = {}): Promise<TestUser> {
   const email = `${tag}-${randomUUID().slice(0, 8)}@test.local`;
   const password = `pw-${randomUUID()}`;
   const { data, error } = await admin().auth.admin.createUser({ email, password, email_confirm: true });
@@ -31,5 +33,10 @@ export async function makeUser(tag: string): Promise<TestUser> {
   const client = createClient(URL, ANON, opts);
   const { error: signInError } = await client.auth.signInWithPassword({ email, password });
   if (signInError) throw signInError;
+  if (options.consent !== false) {
+    const rows = REQUIRED_CONSENTS.map((purpose) => ({ user_id: data.user.id, purpose, policy_version: POLICY_VERSION }));
+    const { error: consentError } = await client.from("consents").insert(rows);
+    if (consentError) throw consentError;
+  }
   return { id: data.user.id, email, client };
 }

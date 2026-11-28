@@ -99,6 +99,7 @@ function Confirm({ draft, onBusy }: { draft: ApplicationDraft; onBusy: (b: boole
               onClick={() => toggleIn("timeSlots", t.id, MAX_TIME_SLOTS)}>{t.label}</TagChip>
           ))}
         </div>
+        <p className="mt-2 text-[12px] text-muted">평일 저녁은 월~금, 주말 시간대는 토·일 날짜에만 적용돼요.</p>
       </Field>
 
       <Field id="budgetMin" label="1인 예산 (식음료)" hint="필수" error={errors.budgetMin ?? errors.budgetMax}>

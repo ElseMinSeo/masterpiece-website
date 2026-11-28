@@ -114,7 +114,9 @@ export class LocalDemoRepository implements AppRepository {
     const same = apps.find((a) => a.idempotencyKey === draft.idempotencyKey);
     if (same) return { ok: true, application: same, duplicate: true };
     const active = apps.find((a) => ACTIVE.includes(a.status));
-    if (active) return { ok: true, application: active, duplicate: true };
+    if (active) {
+      return { ok: false, errors: { _form: `이미 진행 중인 신청(${active.number})이 있어요. 지금 신청이 끝난 뒤 새로 신청할 수 있어요.` } };
+    }
 
     const now = this.now();
     const parsed = parseSubmission(draft, now);

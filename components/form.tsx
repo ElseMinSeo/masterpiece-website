@@ -103,13 +103,16 @@ export function OptionCard({ selected, onClick, children, role = "checkbox" }: {
   );
 }
 
-export function TextInput({ value, onChange, placeholder, maxLength, invalid, id, label, inputMode, type = "text" }: {
+export function TextInput({ value, onChange, placeholder, maxLength, invalid, id, label, inputMode, type = "text", autoComplete, spellCheck }: {
   value: string; onChange: (v: string) => void; placeholder?: string; maxLength?: number; invalid?: boolean; id: string; label: string;
   inputMode?: "numeric" | "text"; type?: string;
+  /** 휴대폰 자동입력 힌트 (예: "email", "one-time-code") */
+  autoComplete?: string; spellCheck?: boolean;
 }) {
   return (
     <input
       id={id} aria-label={label} aria-invalid={invalid || undefined} type={type} inputMode={inputMode}
+      autoComplete={autoComplete} spellCheck={spellCheck}
       value={value} maxLength={maxLength} placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}
       className={cx(

@@ -53,12 +53,12 @@ function LoginForm() {
       <p className="mt-2 text-[14px] text-ink/70">이메일로 받은 6자리 코드로 로그인해요. 처음이면 자동으로 가입돼요.</p>
       <form className="mt-8" noValidate onSubmit={(e) => { e.preventDefault(); void (sent ? verify() : send()); }}>
         <Field id="email" label="이메일" error={!sent ? error : undefined}>
-          <TextInput id="email-input" label="이메일" type="email" value={email} onChange={(v) => { setEmail(v); setSent(false); }}
+          <TextInput id="email-input" label="이메일" type="email" autoComplete="email" spellCheck={false} value={email} onChange={(v) => { setEmail(v); setSent(false); }}
             placeholder="you@example.com" invalid={!sent && !!error} />
         </Field>
         {sent && (
           <Field id="code" label="6자리 코드" error={error}>
-            <TextInput id="code-input" label="6자리 코드" inputMode="numeric" maxLength={6} value={code}
+            <TextInput id="code-input" label="6자리 코드" inputMode="numeric" autoComplete="one-time-code" spellCheck={false} maxLength={6} value={code}
               onChange={(v) => setCode(v.replace(/\D/g, ""))} placeholder="123456" invalid={!!error} />
             <p className="mt-2 text-[13px] text-muted">{email}로 보냈어요. 메일이 없으면 스팸함을 확인해주세요.</p>
           </Field>
