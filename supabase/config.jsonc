@@ -228,7 +228,7 @@
 
     "rate_limit": {
       // Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-      "email_sent": 2,
+      "email_sent": 100,
       // Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
       "sms_sent": 30,
       // Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -282,13 +282,17 @@
       //   "sender_name": "Admin"
       // },
 
-      // Uncomment to customize email template
-      // "template": {
-      //   "invite": {
-      //     "subject": "You have been invited",
-      //     "content_path": "./supabase/templates/invite.html"
-      //   }
-      // },
+      // 첫, 길: 로그인 메일에 6자리 코드를 넣는다 (기본 메일은 링크만 있음)
+      "template": {
+        "magic_link": {
+          "subject": "[첫, 길] 로그인 코드",
+          "content_path": "./supabase/templates/otp.html"
+        },
+        "confirmation": {
+          "subject": "[첫, 길] 로그인 코드",
+          "content_path": "./supabase/templates/otp.html"
+        }
+      },
 
       // Uncomment to customize notification email template
       // "notification": {
