@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BookmarkIcon, CalendarIcon, FlameIcon, UserIcon } from "@/components/icons";
 import { Button, DevBadge, LinkButton, StatusBadge, TopBar } from "@/components/ui";
 import { TextInput } from "@/components/form";
@@ -10,7 +10,14 @@ import { STATUS_LABEL, useActiveApplication, useApp } from "@/lib/store";
 const VERIFICATION_LABEL = { unverified: "본인확인 전", pending: "확인 중", verified: "확인 완료" } as const;
 
 export default function ProfilePage() {
-  const { ready, mode, user, verification, profile, bookmarks, draft, updateNickname, resetDemo } = useApp();
+  const { ready, mode, user, verification, profile, bookmarks, draft, updateNickname, resetDemo, refresh } = useApp();
+  const [devVerify, setDevVerify] = useState(false);
+
+  // 개발 환경(로컬 Supabase + 플래그)에서만 본인확인 흉내 버튼을 보인다
+  useEffect(() => {
+    if (mode !== "supabase") return;
+    fetch("/api/dev/verify").then((r) => setDevVerify(r.ok)).catch(() => setDevVerify(false));
+  }, [mode]);
   const active = useActiveApplication();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -90,6 +97,12 @@ export default function ProfilePage() {
           <p className="mt-2 text-[13px] leading-relaxed text-muted">
             소개는 본인확인을 마친 분께만 보내드려요. 본인확인은 확인 업체 계약 후 제공돼요.
           </p>
+          {devVerify && verification !== "verified" && (
+            <Button variant="outline" className="mt-3 min-h-10 text-[14px]" onClick={async () => {
+              await fetch("/api/dev/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ outcome: "verified" }) });
+              await refresh();
+            }}>개발용: 확인 완료 처리</Button>
+          )}
         </section>
 
         {mode === "supabase" ? (

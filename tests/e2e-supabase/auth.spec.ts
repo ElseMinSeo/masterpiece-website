@@ -47,3 +47,11 @@ test("개발용 테스트 로그인은 동의까지 처리하고 바로 쓸 수 
   await page.goto("/appointments");
   await expect(page).toHaveURL(/\/appointments$/);
 });
+
+test("개발용 본인확인 흉내: 프로필 배지가 확인 완료로 바뀐다", async ({ page }) => {
+  await page.request.post("/api/dev/login", { data: { email: unique("verify") } });
+  await page.goto("/profile");
+  await expect(page.getByTestId("verification-status")).toHaveText("본인확인 전");
+  await page.getByRole("button", { name: "개발용: 확인 완료 처리" }).click();
+  await expect(page.getByTestId("verification-status")).toHaveText("확인 완료");
+});
